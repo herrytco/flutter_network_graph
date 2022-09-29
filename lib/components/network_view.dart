@@ -4,7 +4,7 @@ import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
 import 'package:network_graph/components/arrow_painter.dart';
 
-class NetworkView extends StatefulWidget {
+class NetworkView<T> extends StatefulWidget {
   const NetworkView({
     super.key,
     required this.graph,
@@ -12,15 +12,15 @@ class NetworkView extends StatefulWidget {
     this.settings = const GraphSettings(),
   });
 
-  final Graph graph;
+  final Graph<T> graph;
   final GraphSettings settings;
-  final Widget Function(Node) nodeBuilder;
+  final Widget Function(Node<T>) nodeBuilder;
 
   @override
-  State<StatefulWidget> createState() => _NetworkViewState();
+  State<StatefulWidget> createState() => _NetworkViewState<T>();
 }
 
-class _NetworkViewState extends State<NetworkView> {
+class _NetworkViewState<T> extends State<NetworkView> {
   Map<int, int> lanePositions = {};
 
   double get containerWidth =>

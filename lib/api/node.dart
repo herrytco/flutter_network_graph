@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:network_graph/api/graph_settings.dart';
 
-class Node {
-  final List<String> nodesBefore;
-  final String label;
+class Node<T> {
+  final List<T> nodesBefore;
+  final T label;
   int? rank;
   int? row;
   int? component;

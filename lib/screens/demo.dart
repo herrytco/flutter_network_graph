@@ -12,22 +12,22 @@ class DemoScreen extends StatefulWidget {
 }
 
 class DemoState extends State<DemoScreen> {
-  List<Node> nodes = [];
-  late Graph graph;
+  List<Node<String>> nodes = [];
+  late Graph<String> graph;
 
   @override
   void initState() {
     nodes = [
-      Node([], "A"),
-      Node(["A"], "B"),
-      Node(["B", "D", "G"], "C"),
-      Node([], "D"),
-      Node(["D"], "E"),
-      Node([], "F"),
-      Node([], "G"),
-      Node([], "H"),
-      Node([], "J"),
-      Node(["H", "J"], "I"),
+      Node<String>([], "A"),
+      Node<String>(["A"], "B"),
+      Node<String>(["B", "D", "G"], "C"),
+      Node<String>([], "D"),
+      Node<String>(["D"], "E"),
+      Node<String>([], "F"),
+      Node<String>([], "G"),
+      Node<String>([], "H"),
+      Node<String>([], "J"),
+      Node<String>(["H", "J"], "I"),
     ];
 
     graph = Graph(nodes);

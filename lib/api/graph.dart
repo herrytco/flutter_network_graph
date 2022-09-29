@@ -2,9 +2,9 @@ import 'dart:math';
 
 import 'package:network_graph/api/node.dart';
 
-class Graph {
-  final List<Node> nodes;
-  List<Node> headCandidates = [];
+class Graph<T> {
+  final List<Node<T>> nodes;
+  List<Node<T>> headCandidates = [];
   int nRanks = 0;
   int nRows = 0;
 
@@ -21,7 +21,7 @@ class Graph {
   void _calculateComponenting() {
     int componentIndex = 0;
 
-    for (Node head in headCandidates) {
+    for (Node<T> head in headCandidates) {
       int? currentComponent = _getCurrentComponentOfSubtree(head);
 
       if (currentComponent == null) {
@@ -32,18 +32,18 @@ class Graph {
     }
   }
 
-  void _setComponentIndexToSubtree(List<Node> roots, int index) {
-    for (Node r in roots) {
+  void _setComponentIndexToSubtree(List<Node<T>> roots, int index) {
+    for (Node<T> r in roots) {
       r.component ??= index;
 
       _setComponentIndexToSubtree(getChildren(r), index);
     }
   }
 
-  int? _getCurrentComponentOfSubtree(Node root) {
+  int? _getCurrentComponentOfSubtree(Node<T> root) {
     if (root.component != null) return root.component;
 
-    List<Node> children = getChildren(root);
+    List<Node<T>> children = getChildren(root);
     List<int> childComponentValues = children
         .map((e) => _getCurrentComponentOfSubtree(e))
         .where((element) => element != null)
@@ -53,7 +53,7 @@ class Graph {
     return childComponentValues.isNotEmpty ? childComponentValues[0] : null;
   }
 
-  List<Node> getChildren(Node n) {
+  List<Node<T>> getChildren(Node<T> n) {
     if (n.nodesBefore.isEmpty) return [];
 
     return n.nodesBefore
@@ -66,12 +66,12 @@ class Graph {
       rowIndices[i] = 0;
     }
 
-    for (Node head in headCandidates) {
+    for (Node<T> head in headCandidates) {
       _row([head]);
 
       int maxRow = rowIndices.values.reduce(max);
 
-      for(int rowIndex in rowIndices.keys) {
+      for (int rowIndex in rowIndices.keys) {
         rowIndices[rowIndex] = maxRow;
       }
     }
@@ -79,15 +79,15 @@ class Graph {
     nRows = rowIndices.values.reduce(max);
   }
 
-  void _row(List<Node> nodesToRow) {
-    for (Node k in nodesToRow) {
+  void _row(List<Node<T>> nodesToRow) {
+    for (Node<T> k in nodesToRow) {
       int nodeRow = rowIndices[k.rank!]!;
       rowIndices[k.rank!] = nodeRow + 1;
 
       k.row ??= nodeRow;
 
       if (k.nodesBefore.isNotEmpty) {
-        List<Node> children = k.nodesBefore
+        List<Node<T>> children = k.nodesBefore
             .map((e) => nodes.firstWhere((element) => element.label == e))
             .toList();
 
@@ -97,7 +97,7 @@ class Graph {
   }
 
   void _calculateRanking() {
-    headCandidates = List<Node>.from(nodes)
+    headCandidates = List<Node<T>>.from(nodes)
         .where((element) => _hasOnlyIncomingDependencies(element))
         .toList();
 
@@ -108,7 +108,7 @@ class Graph {
 
     // prune unused ranks
     while (!isRank1Populated) {
-      for (Node n in nodes) {
+      for (Node<T> n in nodes) {
         n.rank = n.rank! - 1;
       }
 
@@ -122,13 +122,13 @@ class Graph {
         1;
   }
 
-  void _rank(List<Node> nodesToRank, int rank) {
-    List<Node> nextLayer = [];
+  void _rank(List<Node<T>> nodesToRank, int rank) {
+    List<Node<T>> nextLayer = [];
 
-    for (Node n in nodesToRank) {
+    for (Node<T> n in nodesToRank) {
       n.rank = rank;
 
-      List<Node> children = n.nodesBefore
+      List<Node<T>> children = n.nodesBefore
           .map(
             (childLabel) =>
                 nodes.firstWhere((element) => element.label == childLabel),
@@ -145,8 +145,8 @@ class Graph {
     _rank(nextLayer, rank - 1);
   }
 
-  bool _hasOnlyIncomingDependencies(Node n) {
-    for (Node t in nodes) {
+  bool _hasOnlyIncomingDependencies(Node<T> n) {
+    for (Node<T> t in nodes) {
       if (t == n) continue;
 
       if (t.nodesBefore.contains(n.label)) {
@@ -161,7 +161,7 @@ class Graph {
   String toString() {
     String result = "Graph(";
 
-    for (Node node in nodes) {
+    for (Node<T> node in nodes) {
       result += "$node\n";
     }
 

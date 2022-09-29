@@ -63,7 +63,10 @@ class ArrowPainter extends CustomPainter {
           child,
           to,
           Paint()
-            ..color = child == activeNode || to == activeNode ? settings.activeEdgeColor : settings.edgeColor
+            ..style = PaintingStyle.stroke
+            ..color = child == activeNode || to == activeNode
+                ? settings.activeEdgeColor
+                : settings.edgeColor
             ..strokeWidth = 1,
         ),
       );
@@ -136,21 +139,35 @@ class ArrowPainter extends CustomPainter {
       for (Edge e in edges) {
         List<Offset> path = _calculatePath(e);
 
-        for (int i = 0; i < path.length - 1; i++) {
-          canvas.drawLine(path[i], path[i + 1], e.paint);
+        Offset vm = Offset(path[1].dx, (path[1].dy + path[2].dy) / 2);
 
-          // draw arrow joins
-          canvas.drawCircle(
-            path.first,
-            settings.connectorSize,
-            e.paint,
-          );
-          canvas.drawCircle(
-            path.last,
-            settings.connectorSize,
-            e.paint,
-          );
-        }
+        Path p = Path();
+        p.moveTo(path[0].dx, path[0].dy);
+        p.quadraticBezierTo(path[1].dx, path[1].dy, vm.dx, vm.dy);
+        p.quadraticBezierTo(path[2].dx, path[2].dy, path.last.dx, path.last.dy);
+        canvas.drawPath(p, e.paint);
+
+        // draw arrow joins
+        canvas.drawCircle(
+          path.first,
+          settings.connectorSize,
+          Paint()
+            ..strokeWidth = e.paint.strokeWidth
+            ..color = e.paint.color
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawCircle(
+          path.last,
+          settings.connectorSize,
+          Paint()
+            ..strokeWidth = e.paint.strokeWidth
+            ..color = e.paint.color
+            ..style = PaintingStyle.fill,
+        );
+
+        // for (int i = 0; i < path.length - 1; i++) {
+        //   canvas.drawLine(path[i], path[i + 1], e.paint);
+        // }
       }
     }
   }
