@@ -12,12 +12,14 @@ class GraphSettings {
     this.edgeColor = Colors.black,
     this.activeEdgeColor = Colors.red,
     this.connectorSize = 3,
+    this.edgeThickness = 1,
   });
 
   final Color backgroundColor;
 
   final Color edgeColor;
   final Color activeEdgeColor;
+  final double edgeThickness;
 
   final double connectorSize;
 

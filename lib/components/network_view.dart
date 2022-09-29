@@ -10,11 +10,19 @@ class NetworkView<T> extends StatefulWidget {
     required this.graph,
     required this.nodeBuilder,
     this.settings = const GraphSettings(),
+    this.onClick,
   });
 
   final Graph<T> graph;
   final GraphSettings settings;
   final Widget Function(Node<T>) nodeBuilder;
+  final void Function(T)? onClick;
+
+  void reportClick(Node<dynamic> node) {
+    if (onClick == null) return;
+
+    onClick!(graph.nodes.firstWhere((element) => element == node).label);
+  }
 
   @override
   State<StatefulWidget> createState() => _NetworkViewState<T>();
@@ -45,6 +53,10 @@ class _NetworkViewState<T> extends State<NetworkView> {
     }
 
     super.initState();
+  }
+
+  void _onClick(Node<dynamic> node) {
+    widget.reportClick(node);
   }
 
   @override
@@ -104,7 +116,6 @@ class _NetworkViewState<T> extends State<NetworkView> {
                     height: widget.settings.nodeHeight,
                     offset: node.calculateOffset(
                         NodePosition.topLeft, widget.settings),
-                    child: widget.nodeBuilder(node),
                     onEnter: () {
                       setState(() {
                         _selectedNode = node;
@@ -115,6 +126,8 @@ class _NetworkViewState<T> extends State<NetworkView> {
                         _selectedNode = null;
                       });
                     },
+                    onClick: () => _onClick(node),
+                    child: widget.nodeBuilder(node),
                   ),
                 )
                 .toList(),
@@ -129,8 +142,9 @@ class _NetworkGraphNode extends StatelessWidget {
   final double width;
   final double height;
   final Widget child;
-  final Function onEnter;
-  final Function onExit;
+  final void Function() onEnter;
+  final void Function() onExit;
+  final void Function() onClick;
 
   const _NetworkGraphNode({
     super.key,
@@ -140,6 +154,7 @@ class _NetworkGraphNode extends StatelessWidget {
     required this.child,
     required this.onEnter,
     required this.onExit,
+    required this.onClick,
   });
 
   @override
@@ -147,13 +162,16 @@ class _NetworkGraphNode extends StatelessWidget {
     return Positioned(
       left: offset.dx,
       top: offset.dy,
-      child: MouseRegion(
-        onEnter: (event) => onEnter(),
-        onExit: (event) => onExit(),
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: child,
+      child: GestureDetector(
+        onTap: () => onClick(),
+        child: MouseRegion(
+          onEnter: (event) => onEnter(),
+          onExit: (event) => onExit(),
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: child,
+          ),
         ),
       ),
     );

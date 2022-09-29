@@ -1,5 +1,5 @@
 name: network_graph
-version: 1.0.0+1
+version: 0.0.2+2
 publish_to: https://onepub.dev/api/sxssdavuhn/
 repository: https://github.com/herrytco/flutter_network_graph
 description: A new Flutter project.

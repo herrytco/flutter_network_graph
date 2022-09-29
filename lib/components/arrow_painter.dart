@@ -1,9 +1,9 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:network_graph/api/graph.dart';
 import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
+import 'package:network_graph/api/path/path_calculator.dart';
+import 'package:network_graph/api/path/single_arrow_per_lane_calculator.dart';
 
 class ArrowPainter extends CustomPainter {
   final Graph graph;
@@ -13,6 +13,8 @@ class ArrowPainter extends CustomPainter {
   final Map<String, int> nextOutIndices = {};
   final Map<String, int> nextInIndices = {};
   final Map<int, Map<int, int>> laneEdges = {};
+
+  late PathCalculator pathCalculator;
 
   ArrowPainter(
     this.graph,
@@ -24,6 +26,8 @@ class ArrowPainter extends CustomPainter {
     }
 
     _calculateNodeCardinalities();
+
+    pathCalculator = SingleArrowPerLaneCalculator(settings, laneEdges);
   }
 
   void _calculateNodeCardinalities() {
@@ -67,7 +71,8 @@ class ArrowPainter extends CustomPainter {
             ..color = child == activeNode || to == activeNode
                 ? settings.activeEdgeColor
                 : settings.edgeColor
-            ..strokeWidth = 1,
+            ..strokeWidth = settings.edgeThickness
+            ..isAntiAlias = true,
         ),
       );
       components[to.component!] = edges;
@@ -76,68 +81,13 @@ class ArrowPainter extends CustomPainter {
     }
   }
 
-  double _calculateNodeY(Offset pivot, double yTop, int nEdges, int edgeIndex) {
-    double yOut = pivot.dy;
-    if (nEdges > 1) {
-      int pointsPerSide = nEdges ~/ 2;
-
-      double yCenter = pivot.dy;
-
-      double d = (yCenter - yTop) / (pointsPerSide + 1);
-
-      if (nEdges % 2 == 0 || edgeIndex > 0) {
-        yOut = yCenter + pow(-1, edgeIndex + 1) * d;
-      }
-    }
-
-    return yOut;
-  }
-
-  List<Offset> _calculatePath(Edge e) {
-    Offset origin = e.from.calculateOffset(NodePosition.centerRight, settings);
-    Offset dest = e.to.calculateOffset(NodePosition.centerLeft, settings);
-
-    double yOut = _calculateNodeY(
-      origin,
-      e.from.calculateOffset(NodePosition.topRight, settings).dy,
-      e.nOutEdges!,
-      e.outIndex!,
-    );
-
-    double yIn = _calculateNodeY(
-      dest,
-      e.to.calculateOffset(NodePosition.topLeft, settings).dy,
-      e.nInEdges!,
-      e.inIndex!,
-    );
-
-    double dx = (dest.dx - origin.dx);
-    double xCenter = origin.dx + dx / 2;
-    double xLeft = origin.dx;
-
-    int nLanes = laneEdges[e.from.component!]![e.from.rank!]!;
-
-    double d = (xCenter - xLeft) / (nLanes + 1);
-
-    double xLane = xCenter + pow(-1, e.laneIndex!) * d * e.laneIndex! ~/ 2;
-
-    List<Offset> path = [];
-
-    path.add(Offset(origin.dx, yOut));
-    path.add(Offset(xLane, yOut));
-    path.add(Offset(xLane, yIn));
-    path.add(Offset(dest.dx, yIn));
-
-    return path;
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
     for (int component in components.keys) {
       List<Edge> edges = components[component]!;
 
       for (Edge e in edges) {
-        List<Offset> path = _calculatePath(e);
+        List<Offset> path = pathCalculator.calculatePath(e);
 
         Offset vm = Offset(path[1].dx, (path[1].dy + path[2].dy) / 2);
 
