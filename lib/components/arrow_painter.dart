@@ -5,13 +5,13 @@ import 'package:network_graph/api/node.dart';
 import 'package:network_graph/api/path/path_calculator.dart';
 import 'package:network_graph/api/path/single_arrow_per_lane_calculator.dart';
 
-class ArrowPainter extends CustomPainter {
-  final Graph graph;
+class ArrowPainter<T> extends CustomPainter {
+  final Graph<T> graph;
   final Node? activeNode;
   final GraphSettings settings;
-  final Map<int, List<Edge>> components = {};
-  final Map<String, int> nextOutIndices = {};
-  final Map<String, int> nextInIndices = {};
+  final Map<int, List<Edge<T>>> components = {};
+  final Map<T, int> nextOutIndices = {};
+  final Map<T, int> nextInIndices = {};
   final Map<int, Map<int, int>> laneEdges = {};
 
   late PathCalculator pathCalculator;
@@ -21,7 +21,7 @@ class ArrowPainter extends CustomPainter {
     this.settings,
     this.activeNode,
   ) {
-    for (Node head in graph.headCandidates) {
+    for (Node<T> head in graph.headCandidates) {
       _placeEdges(head);
     }
 
@@ -31,8 +31,8 @@ class ArrowPainter extends CustomPainter {
   }
 
   void _calculateNodeCardinalities() {
-    for (List<Edge> component in components.values) {
-      for (Edge e in component) {
+    for (List<Edge<T>> component in components.values) {
+      for (Edge<T> e in component) {
         int nOut = component.where((element) => element.from == e.from).length;
         e.nOutEdges = nOut;
         e.outIndex = nextOutIndices[e.from.label] ?? 0;
@@ -56,14 +56,14 @@ class ArrowPainter extends CustomPainter {
     }
   }
 
-  void _placeEdges(Node to) {
-    List<Node> children = graph.getChildren(to);
+  void _placeEdges(Node<T> to) {
+    List<Node<T>> children = graph.getChildren(to);
     if (children.isEmpty) return;
 
-    for (Node child in children) {
-      List<Edge> edges = components[to.component!] ?? [];
+    for (Node<T> child in children) {
+      List<Edge<T>> edges = components[to.component!] ?? [];
       edges.add(
-        Edge(
+        Edge<T>(
           child,
           to,
           Paint()
@@ -84,9 +84,9 @@ class ArrowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (int component in components.keys) {
-      List<Edge> edges = components[component]!;
+      List<Edge<T>> edges = components[component]!;
 
-      for (Edge e in edges) {
+      for (Edge<T> e in edges) {
         List<Offset> path = pathCalculator.calculatePath(e);
 
         Offset vm = Offset(path[1].dx, (path[1].dy + path[2].dy) / 2);
@@ -114,10 +114,6 @@ class ArrowPainter extends CustomPainter {
             ..color = e.paint.color
             ..style = PaintingStyle.fill,
         );
-
-        // for (int i = 0; i < path.length - 1; i++) {
-        //   canvas.drawLine(path[i], path[i + 1], e.paint);
-        // }
       }
     }
   }
@@ -128,9 +124,9 @@ class ArrowPainter extends CustomPainter {
   }
 }
 
-class Edge {
-  final Node from;
-  final Node to;
+class Edge<T> {
+  final Node<T> from;
+  final Node<T> to;
   final Paint paint;
 
   int? nOutEdges;
