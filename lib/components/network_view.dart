@@ -95,8 +95,7 @@ class _TreeRenderingState<T> extends State<_TreeRendering<T>> {
       height: widget.tree.height(widget.settings),
       width: widget.tree.width(widget.settings),
       decoration: BoxDecoration(
-        // color: settings.backgroundColor,
-        color: Colors.blue[100],
+        color: widget.settings.backgroundColor,
       ),
       child: Stack(
         children: [

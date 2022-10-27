@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:network_graph/api/graph_exception.dart';
 import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
 import 'package:network_graph/api/tree.dart';
@@ -53,12 +54,41 @@ class Graph<T> {
     for (Node<T> node in nodes) {
       for (T neighbour in node.nodesBefore) {
         nodes.firstWhere((element) => element.label == neighbour,
-            orElse: () => throw Exception(
+            orElse: () => throw GraphException(
                 "Node with label '$neighbour' does not exist in the graph!"));
       }
     }
 
-    // TODO 2. check for circles
+    // 2. check for circles
+    for (Node<T> node in nodes) {
+      if (_existCircleWithStart(node)) {
+        throw GraphException("Circle detected! Included node: $node");
+      }
+    }
+  }
+
+  bool _existCircleWithStart(Node<T> start) {
+    Set<Node<T>> toCheck = start.getChildren(nodes).toSet();
+    Set<Node<T>> visitedNodes = {};
+
+    while (toCheck.isNotEmpty) {
+      Node<T> k = toCheck.first;
+      toCheck.remove(k);
+      visitedNodes.add(k);
+
+      if (k == start) return true;
+      if (k.getChildren(nodes).contains(start)) return true;
+
+      visitedNodes.add(k);
+      toCheck.addAll(
+        k
+            .getChildren(nodes)
+            .where((node) => !visitedNodes.contains(node))
+            .toList(),
+      );
+    }
+
+    return false;
   }
 
   @override
