@@ -4,29 +4,32 @@ import 'dart:ui';
 import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
 import 'package:network_graph/api/path/path_calculator.dart';
+import 'package:network_graph/api/tree.dart';
 import 'package:network_graph/components/arrow_painter.dart';
 
-class SingleArrowPerLaneCalculator implements PathCalculator {
+class SingleArrowPerLaneCalculator<T> implements PathCalculator {
+  final Tree<T> tree;
   final GraphSettings settings;
-  final Map<int, Map<int, int>> laneEdges;
+  final Map<int, int> laneEdges;
 
-  SingleArrowPerLaneCalculator(this.settings, this.laneEdges);
+  SingleArrowPerLaneCalculator(this.settings, this.laneEdges, this.tree);
 
   @override
   List<Offset> calculatePath(Edge e) {
-    Offset origin = e.from.calculateOffset(NodePosition.centerRight, settings);
-    Offset dest = e.to.calculateOffset(NodePosition.centerLeft, settings);
+    Offset origin =
+        e.from.calculateOffset(NodePosition.centerRight, settings, tree);
+    Offset dest = e.to.calculateOffset(NodePosition.centerLeft, settings, tree);
 
     double yOut = _calculateNodeY(
       origin,
-      e.from.calculateOffset(NodePosition.topRight, settings).dy,
+      e.from.calculateOffset(NodePosition.topRight, settings, tree).dy,
       e.nOutEdges!,
       e.outIndex!,
     );
 
     double yIn = _calculateNodeY(
       dest,
-      e.to.calculateOffset(NodePosition.topLeft, settings).dy,
+      e.to.calculateOffset(NodePosition.topLeft, settings, tree).dy,
       e.nInEdges!,
       e.inIndex!,
     );
@@ -35,7 +38,7 @@ class SingleArrowPerLaneCalculator implements PathCalculator {
     double xCenter = origin.dx + dx / 2;
     double xLeft = origin.dx;
 
-    int nLanes = laneEdges[e.from.component!]![e.from.rank!]!;
+    int nLanes = laneEdges[tree.nodeColumns[e.from]]!;
 
     double d = (xCenter - xLeft) / (nLanes + 1);
 

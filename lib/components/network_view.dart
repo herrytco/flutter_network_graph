@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:network_graph/api/graph.dart';
 import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
+import 'package:network_graph/api/tree.dart';
 import 'package:network_graph/components/arrow_painter.dart';
 
 class NetworkView<T> extends StatefulWidget {
@@ -18,10 +19,10 @@ class NetworkView<T> extends StatefulWidget {
   final Widget Function(Node<T>) nodeBuilder;
   final void Function(T)? onClick;
 
-  void reportClick(Node<dynamic> node) {
+  void reportClick(Node<T> node) {
     if (onClick == null) return;
 
-    onClick!(graph.nodes.firstWhere((element) => element == node).label);
+    onClick!(node.label);
   }
 
   @override
@@ -29,93 +30,123 @@ class NetworkView<T> extends StatefulWidget {
 }
 
 class _NetworkViewState<T> extends State<NetworkView> {
-  Map<int, int> lanePositions = {};
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: widget.graph.height(widget.settings),
+      width: widget.graph.width(widget.settings),
+      decoration: BoxDecoration(
+        color: widget.settings.backgroundColor,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: widget.graph.forest
+            .map((tree) => Padding(
+                  padding: EdgeInsets.only(
+                    top: widget.graph.forest.indexOf(tree) > 0
+                        ? widget.settings.treeSpacing
+                        : 0,
+                  ),
+                  child: _TreeRendering(
+                    widget.settings,
+                    tree,
+                    widget.reportClick,
+                    widget.nodeBuilder,
+                  ),
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
 
-  double get containerWidth =>
-      widget.settings.laneWidth * widget.graph.nRanks +
-      widget.settings.laneMargin * (widget.graph.nRanks - 1);
-
-  double get containerHeight =>
-      widget.settings.rowHeight * widget.graph.nRows +
-      widget.settings.rowMargin * (widget.graph.nRows - 1);
+class _TreeRendering<T> extends StatefulWidget {
+  final GraphSettings settings;
+  final Tree<T> tree;
+  final void Function(Node<T>)? onNodeClick;
+  final Widget Function(Node<T>) nodeBuilder;
 
   static const bool _renderLaneIndicators = false;
   static const bool _renderRowIndicators = false;
-  static const bool _renderArrows = true;
   static const bool _renderNodes = true;
+  static const bool _renderArrows = true;
 
-  Node? _selectedNode;
+  const _TreeRendering(
+    this.settings,
+    this.tree,
+    this.onNodeClick,
+    this.nodeBuilder,
+  );
 
   @override
-  void initState() {
-    for (int i = 0; i < widget.graph.nRanks; i++) {
-      lanePositions[i + 1] = 0;
-    }
+  State<_TreeRendering<T>> createState() => _TreeRenderingState<T>();
+}
 
-    super.initState();
-  }
+class _TreeRenderingState<T> extends State<_TreeRendering<T>> {
+  Node? _selectedNode;
 
-  void _onClick(Node<dynamic> node) {
-    widget.reportClick(node);
+  void _onClick(Node<T> node) {
+    if (widget.onNodeClick != null) widget.onNodeClick!(node);
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: containerHeight,
-      width: containerWidth,
+      height: widget.tree.height(widget.settings),
+      width: widget.tree.width(widget.settings),
       decoration: BoxDecoration(
-        color: widget.settings.backgroundColor,
+        // color: settings.backgroundColor,
+        color: Colors.blue[100],
       ),
       child: Stack(
         children: [
-          if (_renderRowIndicators)
-            for (int i = 0; i < widget.graph.nRows; i++)
-              // lane templates
+          if (_TreeRendering._renderRowIndicators)
+            for (int i = 0; i < widget.tree.nRows; i++)
+              // row templates
               Positioned(
                 top:
                     i * (widget.settings.rowHeight + widget.settings.rowMargin),
                 left: 0,
                 child: Container(
-                  width: containerWidth,
+                  width: widget.tree.width(widget.settings),
                   height: widget.settings.rowHeight,
-                  color: Colors.lightGreenAccent,
+                  color: Colors.red[100],
                 ),
               ),
-
-          if (_renderLaneIndicators)
-            for (int i = 0; i < widget.graph.nRanks; i++)
+          if (_TreeRendering._renderLaneIndicators)
+            for (int i = 0; i < widget.tree.nRanks; i++)
               // lane templates
               Positioned(
                 top: 0,
                 left: i *
                     (widget.settings.laneWidth + widget.settings.laneMargin),
                 child: Container(
-                  height: containerHeight,
+                  height: widget.tree.height(widget.settings),
                   width: widget.settings.laneWidth,
-                  color: Colors.green,
+                  color: Colors.yellow[100],
                 ),
               ),
-
-          // arrow stuff
-          if (_renderArrows)
+          // // arrow stuff
+          if (_TreeRendering._renderArrows)
             CustomPaint(
               size: const Size(double.infinity, double.infinity),
               painter: ArrowPainter(
-                widget.graph,
+                widget.tree,
                 widget.settings,
                 _selectedNode,
               ),
             ),
-
-          if (_renderNodes)
-            ...widget.graph.nodes
+          if (_TreeRendering._renderNodes)
+            ...widget.tree.nodes
                 .map(
                   (node) => _NetworkGraphNode(
                     width: widget.settings.nodeWidth,
                     height: widget.settings.nodeHeight,
                     offset: node.calculateOffset(
-                        NodePosition.topLeft, widget.settings),
+                      NodePosition.topLeft,
+                      widget.settings,
+                      widget.tree,
+                    ),
                     onEnter: () {
                       setState(() {
                         _selectedNode = node;
@@ -147,7 +178,6 @@ class _NetworkGraphNode extends StatelessWidget {
   final void Function() onClick;
 
   const _NetworkGraphNode({
-    super.key,
     required this.width,
     required this.height,
     required this.offset,

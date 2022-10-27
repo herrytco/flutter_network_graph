@@ -1,160 +1,64 @@
 import 'dart:math';
 
+import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
+import 'package:network_graph/api/tree.dart';
 
 class Graph<T> {
   final List<Node<T>> nodes;
+  final List<Tree<T>> forest = [];
+
   List<Node<T>> headCandidates = [];
-  int nRanks = 0;
-  int nRows = 0;
+  int get nRanks => forest.map((e) => e.nRanks).reduce(max);
+  int get nRows => forest.map((e) => e.nRows).reduce((v1, v2) => v1 + v2);
 
   Map<int, int> rowIndices = {};
 
-  static const minRank = 0;
-
   Graph(this.nodes) {
-    _calculateRanking();
-    _calculateRowing();
-    _calculateComponenting();
-  }
+    _verify();
 
-  void _calculateComponenting() {
-    int componentIndex = 0;
-
-    for (Node<T> head in headCandidates) {
-      int? currentComponent = _getCurrentComponentOfSubtree(head);
-
-      if (currentComponent == null) {
-        _setComponentIndexToSubtree([head], componentIndex++);
-      } else {
-        head.component = currentComponent;
-      }
-    }
-  }
-
-  void _setComponentIndexToSubtree(List<Node<T>> roots, int index) {
-    for (Node<T> r in roots) {
-      r.component ??= index;
-
-      _setComponentIndexToSubtree(getChildren(r), index);
-    }
-  }
-
-  int? _getCurrentComponentOfSubtree(Node<T> root) {
-    if (root.component != null) return root.component;
-
-    List<Node<T>> children = getChildren(root);
-    List<int> childComponentValues = children
-        .map((e) => _getCurrentComponentOfSubtree(e))
-        .where((element) => element != null)
-        .map((e) => e!)
+    List<Node<T>> heads = List<Node<T>>.from(nodes)
+        .where((element) => element.isHead(nodes))
         .toList();
 
-    return childComponentValues.isNotEmpty ? childComponentValues[0] : null;
-  }
+    for (Node<T> head in heads) {
+      Node<T> headNew = Node.clone(head);
 
-  List<Node<T>> getChildren(Node<T> n) {
-    if (n.nodesBefore.isEmpty) return [];
-
-    return n.nodesBefore
-        .map((e) => nodes.firstWhere((element) => element.label == e))
-        .toList();
-  }
-
-  void _calculateRowing() {
-    for (int i = 0; i < nRanks; i++) {
-      rowIndices[i] = 0;
+      forest.add(Tree<T>(
+        forest.length,
+        List.from(headNew.subtree(nodes).map((e) => Node.clone(e))),
+      ));
     }
 
-    for (Node<T> head in headCandidates) {
-      _row([head]);
+    int offset = 0;
+    for (Tree<T> tree in forest) {
+      tree.rowOffset = offset;
+      offset += tree.nRows;
+    }
+  }
 
-      int maxRow = rowIndices.values.reduce(max);
+  double height(GraphSettings settings) =>
+      forest
+          .map((e) => e.height(settings))
+          .reduce((value, element) => value + element) +
+      (forest.length - 1) * settings.treeSpacing;
 
-      for (int rowIndex in rowIndices.keys) {
-        rowIndices[rowIndex] = maxRow;
+  double width(GraphSettings settings) =>
+      forest.map((e) => e.width(settings)).reduce(max);
+
+  /// checks if all nodes referenced are present in the graph. Throws an Exception
+  /// if a node is missing.
+  void _verify() {
+    // 1. check for missing nodes
+    for (Node<T> node in nodes) {
+      for (T neighbour in node.nodesBefore) {
+        nodes.firstWhere((element) => element.label == neighbour,
+            orElse: () => throw Exception(
+                "Node with label '$neighbour' does not exist in the graph!"));
       }
     }
 
-    nRows = rowIndices.values.reduce(max);
-  }
-
-  void _row(List<Node<T>> nodesToRow) {
-    for (Node<T> k in nodesToRow) {
-      int nodeRow = rowIndices[k.rank!]!;
-      rowIndices[k.rank!] = nodeRow + 1;
-
-      k.row ??= nodeRow;
-
-      if (k.nodesBefore.isNotEmpty) {
-        List<Node<T>> children = k.nodesBefore
-            .map((e) => nodes.firstWhere((element) => element.label == e))
-            .toList();
-
-        _row(children);
-      }
-    }
-  }
-
-  void _calculateRanking() {
-    headCandidates = List<Node<T>>.from(nodes)
-        .where((element) => _hasOnlyIncomingDependencies(element))
-        .toList();
-
-    _rank(headCandidates, nodes.length);
-
-    bool isRank1Populated =
-        nodes.where((element) => element.rank == minRank).isNotEmpty;
-
-    // prune unused ranks
-    while (!isRank1Populated) {
-      for (Node<T> n in nodes) {
-        n.rank = n.rank! - 1;
-      }
-
-      isRank1Populated =
-          nodes.where((element) => element.rank == minRank).isNotEmpty;
-    }
-
-    nRanks = (nodes
-            .map((e) => e.rank!)
-            .reduce((value, element) => value > element ? value : element)) +
-        1;
-  }
-
-  void _rank(List<Node<T>> nodesToRank, int rank) {
-    List<Node<T>> nextLayer = [];
-
-    for (Node<T> n in nodesToRank) {
-      n.rank = rank;
-
-      List<Node<T>> children = n.nodesBefore
-          .map(
-            (childLabel) =>
-                nodes.firstWhere((element) => element.label == childLabel),
-          )
-          .toList();
-
-      for (var child in children) {
-        nextLayer.add(child);
-      }
-    }
-
-    if (nextLayer.isEmpty) return;
-
-    _rank(nextLayer, rank - 1);
-  }
-
-  bool _hasOnlyIncomingDependencies(Node<T> n) {
-    for (Node<T> t in nodes) {
-      if (t == n) continue;
-
-      if (t.nodesBefore.contains(n.label)) {
-        return false;
-      }
-    }
-
-    return true;
+    // TODO 2. check for circles
   }
 
   @override

@@ -1,27 +1,71 @@
 import 'dart:ui';
 
 import 'package:network_graph/api/graph_settings.dart';
+import 'package:network_graph/api/tree.dart';
 
 class Node<T> {
+  static int _nextId = 1;
+
   final List<T> nodesBefore;
   final T label;
-  int? rank;
-  int? row;
-  int? component;
+  int id = _nextId++;
 
   Node(this.nodesBefore, this.label);
 
-  @override
-  String toString() {
-    return "Node($label, rank:$rank, row:$row, component:$component)";
+  factory Node.clone(Node<T> original) {
+    return Node(original.nodesBefore, original.label);
   }
 
-  Offset calculateOffset(NodePosition position, GraphSettings settings) {
-    int rank = this.rank!;
-    int row = this.row!;
+  @override
+  String toString() {
+    return "Node($id, $label)";
+  }
+
+  List<Node<T>> subtree(List<Node<T>> nodes) {
+    List<Node<T>> children = getChildren(nodes);
+
+    if (children.isEmpty) return [this];
+
+    List<Node<T>> result = [this];
+
+    for (Node<T> child in children) {
+      result.addAll(child.subtree(nodes));
+    }
+
+    return result;
+  }
+
+  List<Node<T>> getChildren(List<Node<T>> nodes) {
+    if (nodesBefore.isEmpty) return [];
+
+    return nodesBefore
+        .map((e) => nodes.firstWhere((element) => element.label == e))
+        .toList();
+  }
+
+  bool isHead(List<Node<T>> nodes) {
+    for (Node<T> other in nodes) {
+      if (other == this) continue;
+
+      if (other.nodesBefore.contains(label)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Offset calculateOffset(
+    NodePosition position,
+    GraphSettings settings,
+    Tree<T> tree,
+  ) {
+    int column = tree.nodeColumns[this]!;
+    int row = tree.nodeRows[this]!;
 
     Offset topLeft = Offset(
-      rank * (settings.laneWidth + settings.laneMargin) + settings.lanePadding,
+      column * (settings.laneWidth + settings.laneMargin) +
+          settings.lanePadding,
       row * (settings.rowHeight + settings.rowMargin) + settings.rowPadding,
     );
 

@@ -7,12 +7,13 @@ class GraphSettings {
     this.rowHeight = 100,
     this.rowPadding = 20,
     this.laneMargin = 100,
-    this.rowMargin = 20,
+    this.rowMargin = 10,
     this.backgroundColor = Colors.transparent,
     this.edgeColor = Colors.black,
     this.activeEdgeColor = Colors.red,
     this.connectorSize = 3,
     this.edgeThickness = 1,
+    this.treeSpacing = 20,
   });
 
   final Color backgroundColor;
@@ -38,6 +39,8 @@ class GraphSettings {
 
   /// space between lanes -> space where arrows are drawn
   final double laneMargin;
+
+  final double treeSpacing;
 
   double get nodeWidth => laneWidth - 2 * lanePadding;
 
