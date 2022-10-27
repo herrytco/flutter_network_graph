@@ -4,6 +4,25 @@ import 'package:network_graph/api/graph_settings.dart';
 import 'package:network_graph/api/node.dart';
 import 'package:network_graph/components/network_view.dart';
 
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const DemoScreen(),
+    );
+  }
+}
+
 class DemoScreen extends StatefulWidget {
   const DemoScreen({super.key});
 
@@ -20,10 +39,10 @@ class DemoState extends State<DemoScreen> {
     nodes = [
       Node<String>([], "A"),
       Node<String>(["A"], "B"),
-      Node<String>(["B", "D", "G"], "C"),
+      Node<String>(["B", "E"], "C"),
       Node<String>([], "D"),
       Node<String>(["D"], "E"),
-      Node<String>([], "F"),
+      Node<String>(["E"], "F"),
       Node<String>([], "G"),
       Node<String>([], "H"),
       Node<String>([], "J"),
@@ -40,11 +59,14 @@ class DemoState extends State<DemoScreen> {
     return Scaffold(
       body: Column(
         children: [
-          NetworkView(
+          NetworkView<String>(
             graph: graph,
             settings: GraphSettings(
               backgroundColor: Colors.green[100]!,
             ),
+            onClick: (String s) {
+              print(s);
+            },
             nodeBuilder: (Node node) => Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
